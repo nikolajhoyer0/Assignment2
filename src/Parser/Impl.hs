@@ -46,12 +46,25 @@ trimZeros ('0':ss) = trimZeros ss
 trimZeros ('-':ss) = '-' : trimZeros ss
 trimZeros s        = s
 
+{- Helper to convert character operations to functions in the language -}
+opToFun :: Char -> String -> ReadP (Expr -> Expr -> Expr)
+opToFun op fun = token $ do
+  _ <- char op
+  return $ \ e1 e2 -> Call fun [e1, e2]
+
+{- Helper to convert string operations to functions in the language -}
+opToFunS :: String -> String -> ReadP (Expr -> Expr -> Expr)
+opToFunS op fun = token $ do
+  _ <- string op
+  return $ \ e1 e2 -> Call fun [e1, e2]
+
 {---------------}
 {- Main parser -}
 {---------------}
 
 parseString :: String -> Either ParseError Program
-parseString s = undefined
+parseString = undefined
+
 
 parseFile :: FilePath -> IO (Either ParseError Program)
 parseFile path = parseString <$> readFile path
@@ -88,8 +101,9 @@ pAssignOpt = token $ do
 
 {- Top level expression parser -}
 pExprStm :: ReadP Stm
-pExprStm = do e <- pExpr
-              return $ ExprAsStm e
+pExprStm = do
+  e <- pExpr
+  return $ ExprAsStm e
 
 pExpr :: ReadP Expr
 pExpr = pExpr1 +++ pComma
@@ -98,8 +112,9 @@ pComma :: ReadP Expr
 pComma = chainl1 pExpr1 dlim
   where
     dlim :: ReadP (Expr -> Expr -> Expr)
-    dlim = do skipSpaces; _ <- char ','; skipSpaces  -- Consume ';' and spaces
-              return $ \ e1 e2 -> Comma e1 e2
+    dlim = token $ do
+      _ <- char ','
+      return $ \ e1 e2 -> Comma e1 e2
 
 {- -}
 pExpr1 :: ReadP Expr
@@ -111,11 +126,7 @@ pExpr2 = pExpr3 +++ pEq
 
 {- -}
 pEq :: ReadP Expr
-pEq = chainl1 pExpr3 eqOp
-  where
-    eqOp :: ReadP (Expr -> Expr -> Expr)
-    eqOp = do skipSpaces; _ <- string "==="; skipSpaces  -- Consume op and spaces
-              return $ \ e1 e2 -> Call "===" [e1, e2]
+pEq = chainl1 pExpr3 $ opToFunS "===" "==="
 
 {- -}
 pExpr3 :: ReadP Expr
@@ -123,11 +134,7 @@ pExpr3 = pExpr4 +++ pLess
 
 {- -}
 pLess :: ReadP Expr
-pLess = chainl1 pExpr4 lessOp
-  where
-    lessOp :: ReadP (Expr -> Expr -> Expr)
-    lessOp = do skipSpaces; _ <- char '<'; skipSpaces  -- Consume op and spaces
-                return $ \ e1 e2 -> Call "<" [e1, e2]
+pLess = chainl1 pExpr4 $ opToFun '+' "+"
 
 {- -}
 pExpr4 :: ReadP Expr
@@ -135,14 +142,7 @@ pExpr4 = pExpr5 +++ pAddSub
 
 {- -}
 pAddSub :: ReadP Expr
-pAddSub = chainl1 pExpr5 (addOp +++ subOp)
-  where
-    addOp :: ReadP (Expr -> Expr -> Expr)
-    addOp = do skipSpaces; _ <- char '+'; skipSpaces  -- Consume op and spaces
-               return $ \ e1 e2 -> Call "+" [e1, e2]
-    subOp :: ReadP (Expr -> Expr -> Expr)
-    subOp = do skipSpaces; _ <- char '-'; skipSpaces  -- Consume op and spaces
-               return $ \ e1 e2 -> Call "-" [e1, e2]
+pAddSub = chainl1 pExpr5 $ opToFun '+' "+" +++ opToFun '-' "-"
 
 {- -}
 pExpr5 :: ReadP Expr
@@ -150,14 +150,7 @@ pExpr5 = pExpr6 +++ pMulMod
 
 {- -}
 pMulMod :: ReadP Expr
-pMulMod = chainl1 pExpr6 (mulOp +++ modOp)
-  where
-    mulOp :: ReadP (Expr -> Expr -> Expr)
-    mulOp = do skipSpaces; _ <- char '*'; skipSpaces  -- Consume op and spaces
-               return $ \ e1 e2 -> Call "*" [e1, e2]
-    modOp :: ReadP (Expr -> Expr -> Expr)
-    modOp = do skipSpaces; _ <- char '%'; skipSpaces  -- Consume op and spaces
-               return $ \ e1 e2 -> Call "%" [e1, e2]
+pMulMod = chainl1 pExpr6 $ opToFun '*' "*" +++ opToFun '%' "%"
 
 {- -}
 pExpr6 :: ReadP Expr
