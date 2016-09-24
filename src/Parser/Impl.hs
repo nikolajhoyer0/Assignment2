@@ -65,7 +65,6 @@ opToFunS op fun = token $ do
 parseString :: String -> Either ParseError Program
 parseString = undefined
 
-
 parseFile :: FilePath -> IO (Either ParseError Program)
 parseFile path = parseString <$> readFile path
 
@@ -81,10 +80,14 @@ pStms = option e s
                return $ Prog stms
 
 pStm :: ReadP [Stm]
-pStm = endBy (pVarDec +++ pExprStm) dlim
-  where dlim :: ReadP Char
-        dlim = do skipSpaces; d <- char ';'; skipSpaces
-                  return d
+pStm = endBy (pVarDec +++ pExprStm) (token $ char ';')
+
+{- Parser for Ident tokens -}
+pIdent :: ReadP Ident
+pIdent = token $ do
+  i  <- satisfy (`elem` alphabet)
+  is <- many $ satisfy (`elem` alphaNum)
+  if notReserved (i:is) then return (i:is) else pfail
 
 {- Variable declaration. Note: does not support empty assignments -}
 pVarDec :: ReadP Stm
@@ -171,20 +174,6 @@ pString = token $ do
   s <- between (satisfy dlim) (satisfy dlim) (many $ satisfy $ fmap not dlim)
   return $ String s
 
-{- Parser for Expressions inside brackets -}
-pParens :: ReadP Expr
-pParens = token $ do
-  let open   p = p == '('
-      close  p = p == ')'
-  between (satisfy open) (satisfy close) pExpr
-
-{- Parser for Ident tokens -}
-pIdent :: ReadP Ident
-pIdent = token $ do
-  i  <- satisfy (`elem` alphabet)
-  is <- many $ satisfy (`elem` alphaNum)
-  if notReserved (i:is) then return (i:is) else pfail
-
 {- True terminal -}
 pTrue :: ReadP Expr
 pTrue = token $ do
@@ -202,6 +191,36 @@ pUndefined :: ReadP Expr
 pUndefined = token $ do
   _ <- string "undefined"
   return Undefined
+
+{- Parser for Expressions inside square brackets -}
+pSquare :: ReadP Expr
+pSquare = undefined
+
+{- Parser for array comprehensions -}
+pArrayComprExpr :: ReadP Expr
+pArrayComprExpr = undefined
+
+{- Parser for Expressions inside parentheses -}
+pParens :: ReadP Expr
+pParens = token $ do
+  let open   p = p == '('
+      close  p = p == ')'
+  between (satisfy open) (satisfy close) pExpr
+
+pAfterident :: ReadP Expr
+pAfterident = undefined
+
+pFunCall :: ReadP Expr
+pFunCall = undefined
+
+pExprs :: ReadP Expr
+pExprs = undefined
+
+pCommaExprs :: ReadP Expr
+pCommaExprs = undefined
+
+pArrayCompr :: ReadP Expr
+pArrayCompr = undefined
 
 -- FOR TESTING IN GHCI!!!
 --  readP_to_S (pNumber <* (skipSpaces >> eof)) "123 fdsafsda fdsa"
