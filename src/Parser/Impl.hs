@@ -58,6 +58,13 @@ opToFunS op fun = token $ do
   _ <- string op
   return $ \ e1 e2 -> Call fun [e1, e2]
 
+{- Helper function for matching expressions in between brackets -}
+exprInBetween :: Char -> Char -> ReadP Expr -> ReadP Expr
+exprInBetween start end expr = token $ do
+  let open   p = p == start
+      close  p = p == end
+  between (satisfy open) (satisfy close) expr
+
 {---------------}
 {- Main parser -}
 {---------------}
@@ -121,7 +128,7 @@ pComma = chainl1 pExpr1 dlim
 
 {- -}
 pExpr1 :: ReadP Expr
-pExpr1 = pExpr2  -- Still need to implement Ident AfterIdent
+pExpr1 = pExpr2 -- +++ pAfterident TODO need to take care of empty pAfterident's
 
 {- -}
 pExpr2 :: ReadP Expr
@@ -177,24 +184,24 @@ pString = token $ do
 {- True terminal -}
 pTrue :: ReadP Expr
 pTrue = token $ do
-  _ <- string "true"
+  string "true"
   return TrueConst
 
 {- False terminal -}
 pFalse :: ReadP Expr
 pFalse = token $ do
-  _ <- string "false"
+  string "false"
   return FalseConst
 
 {- Undefined Terminal -}
 pUndefined :: ReadP Expr
 pUndefined = token $ do
-  _ <- string "undefined"
+  string "undefined"
   return Undefined
 
 {- Parser for Expressions inside square brackets -}
 pSquare :: ReadP Expr
-pSquare = undefined
+pSquare = exprInBetween '[' ']' pExprs
 
 {- Parser for array comprehensions -}
 pArrayComprExpr :: ReadP Expr
@@ -202,22 +209,31 @@ pArrayComprExpr = undefined
 
 {- Parser for Expressions inside parentheses -}
 pParens :: ReadP Expr
-pParens = token $ do
-  let open   p = p == '('
-      close  p = p == ')'
-  between (satisfy open) (satisfy close) pExpr
+pParens = exprInBetween '(' ')' pExpr
 
 pAfterident :: ReadP Expr
-pAfterident = undefined
+pAfterident = pAssignOpt +++ pFunCall
 
 pFunCall :: ReadP Expr
-pFunCall = undefined
+pFunCall = call +++ exprs
+  where call = token $ do
+                 char '.'
+                 i  <- pIdent
+                 fc <- pFunCall
+                 return $ Call i []
+        exprs = exprInBetween '(' ')' pExprs
+
 
 pExprs :: ReadP Expr
-pExprs = undefined
+pExprs = token $ do
+  e  <- pExpr1
+  ce <- pCommaExprs
+  return $ Comma e ce
 
 pCommaExprs :: ReadP Expr
-pCommaExprs = undefined
+pCommaExprs = token $ do
+  char ','
+  pExprs
 
 pArrayCompr :: ReadP Expr
 pArrayCompr = undefined
