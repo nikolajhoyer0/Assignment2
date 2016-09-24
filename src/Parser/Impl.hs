@@ -46,6 +46,7 @@ trimZeros s        = s
 {---------------}
 {- Main parser -}
 {---------------}
+
 parseString :: String -> Either ParseError Program
 parseString = undefined
 
@@ -58,8 +59,10 @@ parseFile path = parseString <$> readFile path
 
 {- Statements -}
 pStms :: ReadP Program
-pStms = do stms <- pStm
-           return $ Prog stms
+pStms = option e s
+  where e = Prog []
+        s = do stms <- pStm
+               return $ Prog stms
 
 pStm :: ReadP [Stm]
 pStm = endBy (pVarDec +++ pExpr) dlim
@@ -67,7 +70,7 @@ pStm = endBy (pVarDec +++ pExpr) dlim
         dlim = do skipSpaces; d <- char ';'; skipSpaces
                   return d
 
-{- Variable declaration -}
+{- Variable declaration. Note: does not support empty assignments -}
 pVarDec :: ReadP Stm
 pVarDec = token $ do
   var <- string "var"
