@@ -1,4 +1,8 @@
-
+.stack
+.stack-work
+dist
 *.hi
 
 *.o
+
+subscript-parser.pdf
