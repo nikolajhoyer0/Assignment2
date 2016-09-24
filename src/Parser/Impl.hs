@@ -13,8 +13,11 @@ data ParseError = ParseError String
 alphabet :: String
 alphabet = '_' : ['A'..'Z'] ++ ['a'..'z']
 
+digits :: String
+digits = ['0'..'9']
+
 alphaNum :: String
-alphaNum = alphabet ++ ['0'..'9']
+alphaNum = alphabet ++ digits
 
 {--------------------}
 {- Helper functions -}
@@ -48,7 +51,7 @@ trimZeros s        = s
 {---------------}
 
 parseString :: String -> Either ParseError Program
-parseString = undefined
+parseString s = undefined
 
 parseFile :: FilePath -> IO (Either ParseError Program)
 parseFile path = parseString <$> readFile path
@@ -65,7 +68,7 @@ pStms = option e s
                return $ Prog stms
 
 pStm :: ReadP [Stm]
-pStm = endBy (pVarDec +++ pExpr) dlim
+pStm = endBy (pVarDec +++ pExprStm) dlim
   where dlim :: ReadP Char
         dlim = do skipSpaces; d <- char ';'; skipSpaces
                   return d
@@ -84,9 +87,12 @@ pAssignOpt = token $ do
   pExpr1
 
 {- Top level expression parser -}
-pExpr :: ReadP Stm
-pExpr = do expr <- pExpr1 +++ pComma
-           return $ ExprAsStm expr
+pExprStm :: ReadP Stm
+pExprStm = do e <- pExpr
+              return $ ExprAsStm e
+
+pExpr :: ReadP Expr
+pExpr = pExpr1 +++ pComma
 
 pComma :: ReadP Expr
 pComma = chainl1 pExpr1 dlim
@@ -142,7 +148,6 @@ pAddSub = chainl1 pExpr5 (addOp +++ subOp)
 pExpr5 :: ReadP Expr
 pExpr5 = pExpr6 +++ pMulMod
 
-
 {- -}
 pMulMod :: ReadP Expr
 pMulMod = chainl1 pExpr6 (mulOp +++ modOp)
@@ -161,8 +166,8 @@ pExpr6 = pString +++ pNumber +++ pTrue +++ pFalse +++ pUndefined +++ pParens
 {- Parser for Number tokens -}
 pNumber :: ReadP Expr
 pNumber = token $ do
-  d  <- satisfy (\x -> x `elem` '-' : ['0'..'9'])
-  ds <- many $ satisfy (\y -> y `elem` ['0'..'9'])
+  d  <- satisfy (\x -> x `elem` '-' : digits)
+  ds <- many $ satisfy (`elem` digits)
   let n = trimZeros $ d : ds
   if numValid n then return $ Number $ read n else pfail
 
@@ -178,7 +183,7 @@ pParens :: ReadP Expr
 pParens = token $ do
   let open   p = p == '('
       close  p = p == ')'
-  between (satisfy open) (satisfy close) pExpr1
+  between (satisfy open) (satisfy close) pExpr
 
 {- Parser for Ident tokens -}
 pIdent :: ReadP Ident
@@ -204,7 +209,6 @@ pUndefined :: ReadP Expr
 pUndefined = token $ do
   _ <- string "undefined"
   return Undefined
-
 
 -- FOR TESTING IN GHCI!!!
 --  readP_to_S (pNumber <* (skipSpaces >> eof)) "123 fdsafsda fdsa"
