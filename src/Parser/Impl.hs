@@ -99,14 +99,14 @@ pIdent = token $ do
 {- Variable declaration. Note: does not support empty assignments -}
 pVarDec :: ReadP Stm
 pVarDec = token $ do
-  var <- string "var"
+  _   <- string "var"
   s   <- pIdent
   ao  <- pAssignOpt
   return $ VarDecl s (Just $ Assign s ao)
 
 pAssignOpt :: ReadP Expr
 pAssignOpt = token $ do
-  char '='
+  _ <- char '='
   pExpr1
 
 {- Top level expression parser -}
@@ -184,19 +184,19 @@ pString = token $ do
 {- True terminal -}
 pTrue :: ReadP Expr
 pTrue = token $ do
-  string "true"
+  _ <- string "true"
   return TrueConst
 
 {- False terminal -}
 pFalse :: ReadP Expr
 pFalse = token $ do
-  string "false"
+  _ <- string "false"
   return FalseConst
 
 {- Undefined Terminal -}
 pUndefined :: ReadP Expr
 pUndefined = token $ do
-  string "undefined"
+  _ <- string "undefined"
   return Undefined
 
 {- Parser for Expressions inside square brackets -}
@@ -217,9 +217,9 @@ pAfterident = pAssignOpt +++ pFunCall
 pFunCall :: ReadP Expr
 pFunCall = call +++ exprs
   where call = token $ do
-                 char '.'
+                 _  <- char '.'
                  i  <- pIdent
-                 fc <- pFunCall
+                 _  <- pFunCall
                  return $ Call i []
         exprs = exprInBetween '(' ')' pExprs
 
@@ -232,7 +232,7 @@ pExprs = token $ do
 
 pCommaExprs :: ReadP Expr
 pCommaExprs = token $ do
-  char ','
+  _ <- char ','
   pExprs
 
 pArrayCompr :: ReadP Expr
