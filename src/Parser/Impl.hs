@@ -217,10 +217,10 @@ pAfterident = pAssignOpt +++ pFunCall
 pFunCall :: ReadP Expr
 pFunCall = call +++ exprs
   where call = token $ do
-                 _  <- char '.'
-                 i  <- pIdent
-                 _  <- pFunCall
-                 return $ Call i []
+                 _   <- char '.'
+                 i   <- pIdent
+                 fc  <- pFunCall
+                 return $ Call i [fc]
         exprs = exprInBetween '(' ')' pExprs
 
 
