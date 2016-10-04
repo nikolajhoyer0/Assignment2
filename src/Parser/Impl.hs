@@ -48,22 +48,22 @@ trimZeros s        = s
 
 {- Helper to convert character operations to functions in the language -}
 opToFun :: Char -> String -> ReadP (Expr -> Expr -> Expr)
-opToFun op fun = token $ do
-  _ <- char op
+opToFun op fun = do
+  _ <- token $ char op
   return $ \ e1 e2 -> Call fun [e1, e2]
 
 {- Helper to convert string operations to functions in the language -}
 opToFunS :: String -> String -> ReadP (Expr -> Expr -> Expr)
-opToFunS op fun = token $ do
-  _ <- string op
+opToFunS op fun = do
+  _ <- token $ string op
   return $ \ e1 e2 -> Call fun [e1, e2]
 
 {- Helper function for matching expressions in between brackets -}
 exprInBetween :: Char -> Char -> ReadP Expr -> ReadP Expr
-exprInBetween start end expr = token $ do
+exprInBetween start end expr = do
   let open   p = p == start
       close  p = p == end
-  between (satisfy open) (satisfy close) expr
+  between (token $ satisfy open) (token $ satisfy close) expr
 
 {---------------}
 {- Main parser -}
@@ -91,7 +91,7 @@ pStm = endBy (pVarDec +++ pExprStm) (token $ char ';')
 
 {- Parser for Ident tokens -}
 pIdent :: ReadP Ident
-pIdent = token $ do
+pIdent = do
   i  <- satisfy (`elem` alphabet)
   is <- many $ satisfy (`elem` alphaNum)
   if notReserved (i:is) then return (i:is) else pfail
@@ -105,9 +105,11 @@ pVarDec = do
   return $ VarDecl s (Just $ Assign s ao)
 
 pAssignOpt :: ReadP Expr
-pAssignOpt = do
-  _ <- token $ char '='
-  pExpr1
+pAssignOpt = option empty nonempty
+  where empty = Undefined
+        nonempty = do
+          _ <- token $ char '='
+          pExpr1
 
 {- Top level expression parser -}
 pExprStm :: ReadP Stm
@@ -122,13 +124,13 @@ pComma :: ReadP Expr
 pComma = chainl1 pExpr1 dlim
   where
     dlim :: ReadP (Expr -> Expr -> Expr)
-    dlim = token $ do
-      _ <- char ','
+    dlim = do
+      _ <- token $ char ','
       return $ \ e1 e2 -> Comma e1 e2
 
 {- -}
 pExpr1 :: ReadP Expr
-pExpr1 = pExpr2 -- +++ pAfterident TODO need to take care of empty pAfterident's
+pExpr1 = pExpr2 +++ pAfterident
 
 {- -}
 pExpr2 :: ReadP Expr
@@ -207,16 +209,15 @@ pFunCall = call +++ exprs
                  return $ Call i [fc]
         exprs = exprInBetween '(' ')' pExprs
 
-
 pExprs :: ReadP Expr
-pExprs = token $ do
+pExprs = do
   e  <- pExpr1
   ce <- pCommaExprs
   return $ Comma e ce
 
 pCommaExprs :: ReadP Expr
-pCommaExprs = token $ do
-  _ <- char ','
+pCommaExprs = do
+  _ <- token $ char ','
   pExprs
 
 pArrayCompr :: ReadP Expr
