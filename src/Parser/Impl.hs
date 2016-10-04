@@ -101,7 +101,7 @@ pExpr = chainl1 pExpr1 dlim
       return $ \ e1 e2 -> Comma e1 e2
 
 pExpr1 :: ReadP Expr
-pExpr1 = pExpr2 +++ pAfterident
+pExpr1 = pExpr2 -- +++ pAfterident
 
 pExpr2 :: ReadP Expr
 pExpr2 = chainl1 pExpr3 $ opToFunS "===" "==="
