@@ -116,7 +116,7 @@ pExprStm = do
   return $ ExprAsStm e
 
 pExpr :: ReadP Expr
-pExpr = pExpr1 +++ pComma
+pExpr = pComma
 
 pComma :: ReadP Expr
 pComma = chainl1 pExpr1 dlim
@@ -132,35 +132,19 @@ pExpr1 = pExpr2 -- +++ pAfterident TODO need to take care of empty pAfterident's
 
 {- -}
 pExpr2 :: ReadP Expr
-pExpr2 = pExpr3 +++ pEq
-
-{- -}
-pEq :: ReadP Expr
-pEq = chainl1 pExpr3 $ opToFunS "===" "==="
+pExpr2 = chainl1 pExpr3 $ opToFunS "===" "==="
 
 {- -}
 pExpr3 :: ReadP Expr
-pExpr3 = pExpr4 +++ pLess
-
-{- -}
-pLess :: ReadP Expr
-pLess = chainl1 pExpr4 $ opToFun '+' "+"
+pExpr3 = chainl1 pExpr4 $ opToFun '<' "<"
 
 {- -}
 pExpr4 :: ReadP Expr
-pExpr4 = pExpr5 +++ pAddSub
-
-{- -}
-pAddSub :: ReadP Expr
-pAddSub = chainl1 pExpr5 $ opToFun '+' "+" +++ opToFun '-' "-"
+pExpr4 = chainl1 pExpr5 $ opToFun '+' "+" <++ opToFun '-' "-"
 
 {- -}
 pExpr5 :: ReadP Expr
-pExpr5 = pExpr6 +++ pMulMod
-
-{- -}
-pMulMod :: ReadP Expr
-pMulMod = chainl1 pExpr6 $ opToFun '*' "*" +++ opToFun '%' "%"
+pExpr5 = chainl1 pExpr6 $ opToFun '*' "*" <++ opToFun '%' "%"
 
 {- -}
 pExpr6 :: ReadP Expr
