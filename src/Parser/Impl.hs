@@ -3,8 +3,23 @@ module Parser.Impl where
 import SubsAst
 import Text.ParserCombinators.ReadP
 
+{------------------}
+{- Parsing errors -}
+{------------------}
+
 data ParseError = ParseError String
                 deriving (Show, Eq)
+
+ambiguousError :: (Program, String) -> (Program, String) -> [(Program, String)]
+                  -> String
+ambiguousError x y zs = "Ambiguous parse. Found " ++ show (length zs + 2) ++
+  " results." ++ " First two were: " ++ show x ++ " and " ++ show y
+
+noresultError :: String
+noresultError = "No parse results found"
+
+remainderError :: String -> String
+remainderError s = "Found result, but could not parse remainder: " ++ s
 
 {--------------------}
 {- Global variables -}
@@ -27,11 +42,10 @@ parseString :: String -> Either ParseError Program
 parseString s =
   let parse = readP_to_S (pStms <* (skipSpaces >> eof)) s
   in case parse of
-    []          -> Left $ ParseError "No parse results found"
-    (_:_:_)     -> Left $ ParseError "Ambiguous parse"
-    [(_, y:ys)] -> Left $ ParseError $ "Found result, but could not parse"
-                                       ++ "remainder: " ++ (y:ys)
-    [(x, _)]    -> Right x
+    []          -> Left $ ParseError noresultError
+    x:y:zs      -> Left $ ParseError $ ambiguousError x y zs
+    [(_, x:xs)] -> Left $ ParseError $ remainderError (x:xs)
+    [(x, "")]   -> Right x
 
 parseFile :: FilePath -> IO (Either ParseError Program)
 parseFile path = parseString <$> readFile path
@@ -89,27 +103,21 @@ pComma = chainl1 pExpr1 dlim
       _ <- token $ char ','
       return $ \ e1 e2 -> Comma e1 e2
 
-{- -}
 pExpr1 :: ReadP Expr
 pExpr1 = pExpr2 +++ pAfterident
 
-{- -}
 pExpr2 :: ReadP Expr
 pExpr2 = chainl1 pExpr3 $ opToFunS "===" "==="
 
-{- -}
 pExpr3 :: ReadP Expr
 pExpr3 = chainl1 pExpr4 $ opToFun '<' "<"
 
-{- -}
 pExpr4 :: ReadP Expr
 pExpr4 = chainl1 pExpr5 $ opToFun '+' "+" <++ opToFun '-' "-"
 
-{- -}
 pExpr5 :: ReadP Expr
 pExpr5 = chainl1 pExpr6 $ opToFun '*' "*" <++ opToFun '%' "%"
 
-{- -}
 pExpr6 :: ReadP Expr
 pExpr6 = pString +++ pNumber +++ pTrue +++ pFalse +++ pUndefined +++ pParens
 
