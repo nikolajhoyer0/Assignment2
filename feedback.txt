@@ -1,0 +1,29 @@
+--- RESUBMIT ---
+* Fix the ambiguity.
+* Implement parseString
+* Implement support for empty variable declarations
+
+--- Report ---
+Good.
+
+You have a typo in your example grammar transformation (top right of page 1).
+
+--- SubsParser ---
+You have everything you need to implement parseString. It's more or less the
+same thing you've been doing to test your parsers on the fly, you just need to
+figure out how to go from a list of resulting parses to an Either. (Hint: The
+desired result is on the form [(res, "")].)
+
+--- Whitespace
+You use the token function on things that are not tokens, such as pVarDec and
+pAssignOpt.
+
+--- Expressions
+That is an impressive amount of ambiguity. The most interesting thing is that
+it's not infinite, it's more like sixty-some identical parses. To solve it, you
+can say:
+
+    pExpr = pComma
+
+And so on for all the different expression-parsers, since chainl1 also handles
+the case where the operator isn't used. This will get rid of most of the ambiguity.
