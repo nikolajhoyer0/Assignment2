@@ -19,58 +19,19 @@ digits = ['0'..'9']
 alphaNum :: String
 alphaNum = alphabet ++ digits
 
-{--------------------}
-{- Helper functions -}
-{--------------------}
-
-{- Helper function for tokenizing -}
-token :: ReadP a -> ReadP a
-token p = skipSpaces >> p
-
-{- Checks that a string is not a reserved keyword -}
-notReserved :: String -> Bool
-notReserved s =
-  let res = ["var", "true", "false", "undefined", "for", "of", "or", "if"]
-  in notElem s res
-
-{- Checks for proper length of a number, given in the assignment text -}
-numValid :: String -> Bool
-numValid []     = False
-numValid [_]    = True
-numValid (s:ss) = if s == '-' then length ss <= 8 else length ss <= 7
-
-{- Checks for leading zeros in a number and then strips them -}
-trimZeros :: String -> String
-trimZeros "0"      = "0"
-trimZeros ('0':ss) = trimZeros ss
-trimZeros ('-':ss) = '-' : trimZeros ss
-trimZeros s        = s
-
-{- Helper to convert character operations to functions in the language -}
-opToFun :: Char -> String -> ReadP (Expr -> Expr -> Expr)
-opToFun op fun = do
-  _ <- token $ char op
-  return $ \ e1 e2 -> Call fun [e1, e2]
-
-{- Helper to convert string operations to functions in the language -}
-opToFunS :: String -> String -> ReadP (Expr -> Expr -> Expr)
-opToFunS op fun = do
-  _ <- token $ string op
-  return $ \ e1 e2 -> Call fun [e1, e2]
-
-{- Helper function for matching expressions in between brackets -}
-exprInBetween :: Char -> Char -> ReadP Expr -> ReadP Expr
-exprInBetween start end expr = do
-  let open   p = p == start
-      close  p = p == end
-  between (token $ satisfy open) (token $ satisfy close) expr
-
 {---------------}
 {- Main parser -}
 {---------------}
 
 parseString :: String -> Either ParseError Program
-parseString = undefined
+parseString s =
+  let parse = readP_to_S (pStms <* (skipSpaces >> eof)) s
+  in case parse of
+    []          -> Left $ ParseError "No parse results found"
+    (_:_:_)     -> Left $ ParseError "Ambiguous parse"
+    [(_, y:ys)] -> Left $ ParseError $ "Found result, but could not parse"
+                                       ++ "remainder: " ++ (y:ys)
+    [(x, _)]    -> Right x
 
 parseFile :: FilePath -> IO (Either ParseError Program)
 parseFile path = parseString <$> readFile path
@@ -222,6 +183,52 @@ pCommaExprs = do
 
 pArrayCompr :: ReadP Expr
 pArrayCompr = undefined
+
+{--------------------}
+{- Helper functions -}
+{--------------------}
+
+{- Helper function for tokenizing -}
+token :: ReadP a -> ReadP a
+token p = skipSpaces >> p
+
+{- Checks that a string is not a reserved keyword -}
+notReserved :: String -> Bool
+notReserved s =
+  let res = ["var", "true", "false", "undefined", "for", "of", "or", "if"]
+  in notElem s res
+
+{- Checks for proper length of a number, given in the assignment text -}
+numValid :: String -> Bool
+numValid []     = False
+numValid [_]    = True
+numValid (s:ss) = if s == '-' then length ss <= 8 else length ss <= 7
+
+{- Checks for leading zeros in a number and then strips them -}
+trimZeros :: String -> String
+trimZeros "0"      = "0"
+trimZeros ('0':ss) = trimZeros ss
+trimZeros ('-':ss) = '-' : trimZeros ss
+trimZeros s        = s
+
+{- Helper to convert character operations to functions in the language -}
+opToFun :: Char -> String -> ReadP (Expr -> Expr -> Expr)
+opToFun op fun = do
+  _ <- token $ char op
+  return $ \ e1 e2 -> Call fun [e1, e2]
+
+{- Helper to convert string operations to functions in the language -}
+opToFunS :: String -> String -> ReadP (Expr -> Expr -> Expr)
+opToFunS op fun = do
+  _ <- token $ string op
+  return $ \ e1 e2 -> Call fun [e1, e2]
+
+{- Helper function for matching expressions in between brackets -}
+exprInBetween :: Char -> Char -> ReadP Expr -> ReadP Expr
+exprInBetween start end expr = do
+  let open   p = p == start
+      close  p = p == end
+  between (token $ satisfy open) (token $ satisfy close) expr
 
 -- FOR TESTING IN GHCI!!!
 --  readP_to_S (pNumber <* (skipSpaces >> eof)) "123 fdsafsda fdsa"

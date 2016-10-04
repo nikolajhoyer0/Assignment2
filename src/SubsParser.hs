@@ -1,13 +1,9 @@
 module SubsParser (
     parseString,
-    parseFile,
-    pExpr,
-    pStms
+    parseFile
   ) where
 
 import Parser.Impl (
     parseString,
-    parseFile,
-    pExpr,
-    pStms
+    parseFile
   )
