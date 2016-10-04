@@ -64,13 +64,6 @@ pStms = option e s
 pStm :: ReadP [Stm]
 pStm = endBy (pVarDec +++ pExprStm) (token $ char ';')
 
-{- Parser for Ident tokens -}
-pIdent :: ReadP Ident
-pIdent = do
-  i  <- satisfy (`elem` alphabet)
-  is <- many $ satisfy (`elem` alphaNum)
-  if notReserved (i:is) then return (i:is) else pfail
-
 {- Variable declaration. Note: does not support empty assignments -}
 pVarDec :: ReadP Stm
 pVarDec = do
@@ -78,6 +71,13 @@ pVarDec = do
   s   <- pIdent
   ao  <- pAssignOpt
   return $ VarDecl s (Just $ Assign s ao)
+
+{- Parser for Ident tokens -}
+pIdent :: ReadP Ident
+pIdent = do
+  i  <- satisfy (`elem` alphabet)
+  is <- many $ satisfy (`elem` alphaNum)
+  if notReserved (i:is) then return (i:is) else pfail
 
 pAssignOpt :: ReadP Expr
 pAssignOpt = option empty nonempty
@@ -93,10 +93,7 @@ pExprStm = do
   return $ ExprAsStm e
 
 pExpr :: ReadP Expr
-pExpr = pComma
-
-pComma :: ReadP Expr
-pComma = chainl1 pExpr1 dlim
+pExpr = chainl1 pExpr1 dlim
   where
     dlim :: ReadP (Expr -> Expr -> Expr)
     dlim = do
