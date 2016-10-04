@@ -98,15 +98,15 @@ pIdent = token $ do
 
 {- Variable declaration. Note: does not support empty assignments -}
 pVarDec :: ReadP Stm
-pVarDec = token $ do
-  _   <- string "var"
+pVarDec = do
+  _   <- token $ string "var "
   s   <- pIdent
   ao  <- pAssignOpt
   return $ VarDecl s (Just $ Assign s ao)
 
 pAssignOpt :: ReadP Expr
-pAssignOpt = token $ do
-  _ <- char '='
+pAssignOpt = do
+  _ <- token $ char '='
   pExpr1
 
 {- Top level expression parser -}
